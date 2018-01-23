@@ -35,6 +35,8 @@ var (
 	buildContext = build.Default
 )
 
+const vendorString = "/vendor/"
+
 func main() {
 	pkgs = make(map[string]*build.Package)
 	ids = make(map[string]int)
@@ -120,7 +122,7 @@ func main() {
 }
 
 func processPackage(root string, pkgName string, level int) error {
-	if level++; level > *maxLevel {
+	if level > *maxLevel {
 		return nil
 	}
 	if ignored[pkgName] {
@@ -136,7 +138,9 @@ func processPackage(root string, pkgName string, level int) error {
 		return nil
 	}
 
-	pkgs[pkg.ImportPath] = pkg
+	importTokens := strings.Split(pkg.ImportPath, vendorString)
+	importPath := importTokens[len(importTokens) - 1]
+	pkgs[importPath] = pkg
 
 	// Don't worry about dependencies for stdlib packages
 	if pkg.Goroot && !*delveGoroot {
@@ -145,7 +149,7 @@ func processPackage(root string, pkgName string, level int) error {
 
 	for _, imp := range getImports(pkg) {
 		if _, ok := pkgs[imp]; !ok {
-			if err := processPackage(root, imp, level); err != nil {
+			if err := processPackage(root, imp, level + 1); err != nil {
 				return err
 			}
 		}
